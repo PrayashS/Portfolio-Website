@@ -16,6 +16,9 @@ backend/logs/
 tmp/
 temp/
 
+#production
+/build
+
 # OS & editor files
 .DS_Store
 Thumbs.db
