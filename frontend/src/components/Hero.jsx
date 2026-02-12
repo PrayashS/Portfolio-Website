@@ -1,5 +1,5 @@
 import React from 'react';
-import { Mail, Linkedin, Github, Download, ArrowDown } from 'lucide-react';
+import { Mail, Linkedin, Github, Download } from 'lucide-react';
 
 export default function Hero({ profile }) {
   if (!profile) return null;

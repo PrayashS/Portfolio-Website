@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { profileAPI, experienceAPI, projectAPI, skillAPI } from '../services/api';
 import { LogOut, Save, Plus, Trash2, Upload, FileText, Download, Edit, X, AlertCircle } from 'lucide-react';
@@ -24,6 +24,50 @@ export default function Admin() {
   const [editingProject, setEditingProject] = useState(null);
   const [editingSkill, setEditingSkill] = useState(null);
 
+  // Logout function wrapped with useCallback
+  const handleLogout = useCallback(() => {
+    localStorage.removeItem('adminToken');
+    setIsAuthenticated(false);
+    navigate('/');
+  }, [navigate]);
+
+  // fetchData function (used by verifyToken)
+  const fetchData = useCallback(async () => {
+    try {
+      const [profileRes, expRes, projRes, skillRes] = await Promise.all([
+        profileAPI.get(),
+        experienceAPI.getAll(),
+        projectAPI.getAll(),
+        skillAPI.getAll()
+      ]);
+
+      setProfile(profileRes.data);
+      setExperiences(expRes.data);
+      setProjects(projRes.data);
+      setSkills(skillRes.data);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      // If unauthorized, logout
+      if (error.response?.status === 401) {
+        handleLogout();
+      }
+    }
+  }, [handleLogout]);
+
+  // Token verification function wrapped with useCallback
+  const verifyToken = useCallback(async () => {
+    try {
+      // This will throw an error if token is invalid/expired
+      await profileAPI.get();
+      setIsAuthenticated(true);
+      fetchData();
+    } catch (error) {
+      // Token is invalid or expired
+      localStorage.removeItem('adminToken');
+      setIsAuthenticated(false);
+    }
+  }, [fetchData]);
+
   // Auto-logout after 30 minutes of inactivity
   useEffect(() => {
     let inactivityTimer;
@@ -47,7 +91,7 @@ export default function Admin() {
       clearTimeout(inactivityTimer);
       events.forEach(event => window.removeEventListener(event, resetTimer));
     };
-  }, [isAuthenticated]);
+  }, [isAuthenticated, handleLogout]);
 
   // Check for existing token and verify it
   useEffect(() => {
@@ -55,20 +99,7 @@ export default function Admin() {
     if (token) {
       verifyToken();
     }
-  }, []);
-
-  const verifyToken = async () => {
-    try {
-      // This will throw an error if token is invalid/expired
-      await profileAPI.get();
-      setIsAuthenticated(true);
-      fetchData();
-    } catch (error) {
-      // Token is invalid or expired
-      localStorage.removeItem('adminToken');
-      setIsAuthenticated(false);
-    }
-  };
+  }, [verifyToken]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -117,34 +148,6 @@ export default function Admin() {
         );
       }
       setPassword('');
-    }
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem('adminToken');
-    setIsAuthenticated(false);
-    navigate('/');
-  };
-
-  const fetchData = async () => {
-    try {
-      const [profileRes, expRes, projRes, skillRes] = await Promise.all([
-        profileAPI.get(),
-        experienceAPI.getAll(),
-        projectAPI.getAll(),
-        skillAPI.getAll()
-      ]);
-
-      setProfile(profileRes.data);
-      setExperiences(expRes.data);
-      setProjects(projRes.data);
-      setSkills(skillRes.data);
-    } catch (error) {
-      console.error('Error fetching data:', error);
-      // If unauthorized, logout
-      if (error.response?.status === 401) {
-        handleLogout();
-      }
     }
   };
 
